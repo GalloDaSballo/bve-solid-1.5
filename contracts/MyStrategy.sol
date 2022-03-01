@@ -75,6 +75,8 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         address[] memory protectedTokens = new address[](2);
         protectedTokens[0] = want;
         protectedTokens[1] = address(VE);
+        // Other tokens can be claimed, but claiming instantly emits them, 
+        // so no tokens are expected to be in the strategy at any time
         return protectedTokens;
     }
 
