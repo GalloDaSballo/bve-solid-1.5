@@ -48,8 +48,6 @@ def want(deployer):
     return token
 
 
-
-
 @pytest.fixture
 def strategist():
     return accounts[1]
@@ -173,7 +171,7 @@ def withdrawalFee(deployed):
 
 
 @pytest.fixture
-def setup_share_math(deployer, vault, want, governance):
+def setup_strat(deployer, vault, want, governance):
 
     depositAmount = int(want.balanceOf(deployer) * 0.5)
     assert depositAmount > 0

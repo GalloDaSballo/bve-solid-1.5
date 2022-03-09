@@ -11,5 +11,20 @@ from helpers.time import days
 """
 
 
-def test_my_custom_test(deployed):
+def test_my_custom_test(setup_strat):
+
+  assert setup_strat.balanceOfPool() > 0;
+
+  ## Lock
+  ## Wait a week
+
+  ## Check balanceOfRewards is non zero
+
+  ## Claim rewards
+
+  ## Vote
+
+  ## Wait another week
+
+  ## Check rewards can be claimed in gauge as well
     assert False

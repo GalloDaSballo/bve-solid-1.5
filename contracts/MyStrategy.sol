@@ -15,16 +15,14 @@ import {BaseStrategy} from "@badger-finance/BaseStrategy.sol";
 import "../interfaces/solidly/IBaseV1Gauge.sol";
 import "../interfaces/solidly/IBaseV1Voter.sol";
 import "../interfaces/solidly/IVe.sol";
+import "../interfaces/solidly/IveDist.sol";
 
 contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using AddressUpgradeable for address;
     using SafeMathUpgradeable for uint256;
-    
 
     // address public want // Inherited from BaseStrategy, the token the strategy wants, swaps into and tries to grow
-    address public lpComponent; // Gauge
-    address public reward; // Token we farm and swap to want / lpComponent
 
     address public constant BADGER_TREE =
         0x89122c767A5F543e663DB536b603123225bc3823;
@@ -34,6 +32,8 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
 
     IBaseV1Voter public constant VOTER = IBaseV1Voter(0xdC819F5d05a6859D2faCbB4A44E5aB105762dbaE);
     
+    IveDist public constant VE_DIST = IveDist(0xA5CEfAC8966452a78d6692837b2ba83d19b57d07);
+
     uint256 public lockId; // Will be set on first lock and always used
 
     bool public relockOnEarn; // Should we relock?
@@ -128,6 +128,13 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         _onlyTrusted();
         relockOnTend = _relock;
         emit SetRelockOnTend(_relock);
+    }
+
+    function claimDistribution() external returns (uint) {
+        require(lockId != 0);
+
+        uint256 harvested = VE_DIST.claim(lockId);
+        _reportToVault(harvested); // Report profit for amount locked, takes fees, issues perf fees
     }
 
 
@@ -249,10 +256,6 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         }
     }
 
-
-
-    //// TODOOOO
-
     /// @dev Does this function require `tend` to be called?
     function _isTendable() internal override pure returns (bool) {
         return false; // Change to true if the strategy should be tended
@@ -286,8 +289,13 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
 
     /// @dev Return the balance (in want) that the strategy has invested somewhere
     function balanceOfPool() public view override returns (uint256) {
-        // Change this to return the amount of want invested in another protocol
-        return 0;
+        // No lock = no funds
+        // Lock is the funds
+        if(lockId == 0) {
+            return 0;
+        }
+
+        return VE.balanceOfNFT(lockId);
     }
 
     /// @dev Return the balance of rewards that the strategy has accrued
@@ -296,6 +304,10 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         // Rewards are 0
         rewards = new TokenAmount[](1);
         rewards[0] = TokenAmount(want, 0);
+
+        if(lockId != 0) {
+            rewards[0] = TokenAmount(want, VE_DIST.claimable(lockId));
+        }
         return rewards;
     }
 }
