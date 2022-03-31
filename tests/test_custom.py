@@ -12,11 +12,16 @@ from helpers.time import days
 
 
 def test_my_custom_test(setup_strat):
+  initial_pool_balance = setup_strat.balanceOfPool()
+  
+  assert initial_pool_balance > 0 ##  Setup deposited so we have non zero
 
-  assert setup_strat.balanceOfPool() > 0;
+  ## Claim Distribution
+  setup_strat.claimDistribution()
 
-  ## Lock
-  ## Wait a week
+  ## Harvest means we increased balance
+  assert setup_strat.balanceOfPool() > initial_pool_balance
+
 
   ## Check balanceOfRewards is non zero
 
@@ -27,4 +32,4 @@ def test_my_custom_test(setup_strat):
   ## Wait another week
 
   ## Check rewards can be claimed in gauge as well
-    assert False
+  assert False

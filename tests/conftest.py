@@ -3,6 +3,7 @@ import time
 from brownie import (
     MyStrategy,
     TheVault,
+    chain,
     interface,
     accounts,
 )
@@ -169,9 +170,13 @@ def performanceFeeStrategist(deployed):
 def withdrawalFee(deployed):
     return deployed.withdrawalFee
 
-
 @pytest.fixture
-def setup_strat(deployer, vault, want, governance):
+def minter():
+    return interface.IBaseV1Minter("0xC4209c19b183e72A037b2D1Fb11fbe522054A90D")
+
+## Setup strategy with some funds
+@pytest.fixture
+def setup_strat(deployer, vault, strategy, want, governance, minter):
 
     depositAmount = int(want.balanceOf(deployer) * 0.5)
     assert depositAmount > 0
@@ -180,7 +185,12 @@ def setup_strat(deployer, vault, want, governance):
 
     vault.earn({"from": governance})
 
-    return DotMap(depositAmount=depositAmount)
+    chain.sleep(100000000)
+    chain.mine()
+
+    minter.update_period({"from": governance}) ## Caller doesn't matter
+
+    return strategy
 
 
 ## Forces reset before each test

@@ -130,11 +130,13 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         emit SetRelockOnTend(_relock);
     }
 
-    function claimDistribution() external returns (uint) {
+    function claimDistribution() public returns (uint) {
         require(lockId != 0);
 
         uint256 harvested = VE_DIST.claim(lockId);
         _reportToVault(harvested); // Report profit for amount locked, takes fees, issues perf fees
+
+        return harvested;
     }
 
 
@@ -264,16 +266,12 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
     function _harvest() internal override returns (TokenAmount[] memory harvested) {
         // No-op as we don't do anything with funds
         // use autoCompoundRatio here to convert rewards to want ...
-
+        uint256 claimed = claimDistribution();
         // Nothing harvested, we have 2 tokens, return both 0s
         harvested = new TokenAmount[](1);
-        harvested[0] = TokenAmount(want, 0);
+        harvested[0] = TokenAmount(want, claimed);
 
-        // keep this to get paid!
-        _reportToVault(0);
-
-        // To emit
-        //     function _processExtraToken(address _token, uint256 _amount) internal {
+        // Do not report again as `claimDistribution` does already
 
         return harvested;
     }
@@ -287,6 +285,16 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
         return tended;
     }
 
+    function votingPower() public view returns (uint256) {
+        // No lock = no funds
+        // Lock is the funds
+        if(lockId == 0) {
+            return 0;
+        }
+
+        return VE.balanceOfNFT(lockId);
+    }
+
     /// @dev Return the balance (in want) that the strategy has invested somewhere
     function balanceOfPool() public view override returns (uint256) {
         // No lock = no funds
@@ -295,7 +303,7 @@ contract MyStrategy is BaseStrategy, ReentrancyGuardUpgradeable {
             return 0;
         }
 
-        return VE.balanceOfNFT(lockId);
+        return uint256(VE.locked(lockId).amount);
     }
 
     /// @dev Return the balance of rewards that the strategy has accrued
